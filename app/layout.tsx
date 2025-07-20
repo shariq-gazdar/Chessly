@@ -25,9 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <UserContextProvider>
-        <body className={`font-body text-text bg-background`}>{children}</body>
-      </UserContextProvider>
+      <body className={`font-body text-text bg-background`}>
+        <UserContextProvider>{children}</UserContextProvider>
+      </body>
     </html>
   );
 }
