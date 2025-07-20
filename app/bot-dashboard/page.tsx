@@ -1,10 +1,11 @@
 "use client";
-
 import { useAuthContext } from "@/context/userContext";
-import { Router, useRouter } from "next/router";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export const page = () => {
+import { useEffect } from "react";
+import React from "react";
+
+function page() {
   const { user } = useAuthContext();
   const router = useRouter();
   useEffect(() => {
@@ -12,5 +13,7 @@ export const page = () => {
       router.push("/signup");
     }
   }, [user]);
-  return <div>about</div>;
-};
+  return <div>Bot </div>;
+}
+
+export default page;
