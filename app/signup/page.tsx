@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { auth } from "@/config/firebase";
+import { createUserWithEmailAndPassword, updateProfile , signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "@/config/firebase";
 import Image from "next/image";
 import IconRenderer from "@/components/IconRenderer";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,6 @@ import { useAuthContext } from "@/context/userContext";
 
 function Signup() {
   const router = useRouter();
-  const { setUser } = useAuthContext();
   const [formData, setFormData] = useState({
     name: "",
     imageUrl: "",
@@ -47,7 +46,6 @@ function Signup() {
         displayName: name,
         photoURL: imageUrl,
       });
-      setUser(auth);
       alert("User created successfully!");
 
       router.push("/");
@@ -55,6 +53,12 @@ function Signup() {
       alert(error.message);
     }
   };
+
+  const handleGoogle = () =>{
+    signInWithPopup(auth , googleProvider).then(()=>{
+      router.push("/")
+    })
+  }
 
   return (
     <div className="flex w-screen h-screen justify-center items-center">
@@ -138,7 +142,9 @@ function Signup() {
           Sign Up
         </button>
 
-        <button className="flex justify-center relative  bg-blue-500 rounded-3xl items-center h-[2.5rem] hover:bg-blue-500/85 cursor-pointer">
+        <button className="flex justify-center relative  bg-blue-500 rounded-3xl items-center h-[2.5rem] hover:bg-blue-500/85 cursor-pointer"
+        onClick={handleGoogle}
+        >
           <Image
             src={"/GoogleLogo.png"}
             width={40}
