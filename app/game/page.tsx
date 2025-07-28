@@ -1,7 +1,6 @@
 "use client";
 import { Chess, Square } from "chess.js";
-import { useSearchParams } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import type {
   ChessboardOptions,
@@ -9,29 +8,46 @@ import type {
   SquareHandlerArgs,
 } from "react-chessboard";
 
-function page() {
+function Page() {
   const chessGameRef = useRef(new Chess());
   const chessGame = chessGameRef.current;
   const [chessPosition, setChessPosition] = useState(chessGame.fen());
   const [moveFrom, setMoveFrom] = useState("");
   const [optionSquares, setOptionSquares] = useState({});
+  const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
+
+  useEffect(() => {
+    const isWhite = Math.random() < 0.5;
+    const color = isWhite ? "w" : "b";
+    setPlayerColor(color);
+
+    setTimeout(() => {
+      const botColor = color === "w" ? "b" : "w";
+      if (chessGame.turn() === botColor) {
+        makeRandomMove();
+      }
+    }, 200);
+  }, []);
+
   function makeRandomMove() {
+    if (chessGame.isGameOver()) return;
+
+    const botColor = playerColor === "w" ? "b" : "w";
+    // if (chessGame.turn() !== botColor) return;
+
     const possibleMoves = chessGame.moves();
-    if (chessGame.isGameOver()) {
-      return;
-    }
     const randomMove =
       possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
     chessGame.move(randomMove);
     setChessPosition(chessGame.fen());
-  }
-  function getMoveOptions(square: Square) {
-    // get the moves for the square
-    const moves = chessGame.moves({
-      square,
-      verbose: true,
-    });
 
+    if (chessGame.isCheckmate()) {
+      alert("Checkmate! You lost.");
+    }
+  }
+
+  function getMoveOptions(square: Square) {
+    const moves = chessGame.moves({ square, verbose: true });
     if (moves.length === 0) {
       setOptionSquares({});
       return false;
@@ -43,111 +59,96 @@ function page() {
         background:
           chessGame.get(move.to) &&
           chessGame.get(move.to)?.color !== chessGame.get(square)?.color
-            ? "radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)"
-            : "radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)",
+            ? "radial-gradient(circle, rgba(0,0,0,.2) 85%, transparent 85%)"
+            : "radial-gradient(circle, rgba(0,0,0,.2) 25%, transparent 25%)",
         borderRadius: "50%",
       };
     }
-    newSquares[square] = {
-      background: "rgba(255, 255, 0, 0.4)",
-    };
+
+    newSquares[square] = { background: "rgba(255, 255, 0, 0.4)" };
     setOptionSquares(newSquares);
     return true;
   }
+
   function onSquareClick({ square, piece }: SquareHandlerArgs) {
+    if (chessGame.turn() !== playerColor) return;
+
     if (!moveFrom && piece) {
       const hasMoveOptions = getMoveOptions(square as Square);
-      if (hasMoveOptions) {
-        setMoveFrom(square);
-      }
+      if (hasMoveOptions) setMoveFrom(square);
       return;
     }
 
-    const moves = chessGame.moves({
-      square: moveFrom as Square,
-      verbose: true,
-    });
-
-    const foundMove = moves.find((m) => m.from === moveFrom && m.to === square);
+    const foundMove = chessGame
+      .moves({ square: moveFrom as Square, verbose: true })
+      .find((m) => m.to === square);
 
     if (!foundMove) {
-      // check if clicked on new piece
       const hasMoveOptions = getMoveOptions(square as Square);
-
-      // if new piece, setMoveFrom, otherwise clear moveFrom
       setMoveFrom(hasMoveOptions ? square : "");
-
-      // return early
       return;
     }
 
-    // is normal move
     try {
-      chessGame.move({
-        from: moveFrom,
-        to: square,
-        promotion: "q",
-      });
-    } catch {
-      // if invalid, setMoveFrom and getMoveOptions
-      const hasMoveOptions = getMoveOptions(square as Square);
+      chessGame.move({ from: moveFrom, to: square, promotion: "q" });
+      setChessPosition(chessGame.fen());
+      setMoveFrom("");
+      setOptionSquares({});
 
-      // if new piece, setMoveFrom, otherwise clear moveFrom
-      if (hasMoveOptions) {
-        setMoveFrom(square);
+      if (chessGame.isCheckmate()) {
+        alert("You win! Checkmate.");
+        return;
       }
 
-      // return early
-      return;
+      setTimeout(makeRandomMove, 300);
+    } catch {
+      setMoveFrom("");
+      setOptionSquares({});
     }
-
-    // update the position state
-    setChessPosition(chessGame.fen());
-
-    // make random cpu move after a short delay
-    setTimeout(makeRandomMove, 300);
-
-    // clear moveFrom and optionSquares
-    setMoveFrom("");
-    setOptionSquares({});
   }
 
-  // handle piece drop
-  function onPieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs) {
-    // type narrow targetSquare potentially being null (e.g. if dropped off board)
-    if (!targetSquare) {
-      return false;
-    }
+  function onPieceDrop({
+    sourceSquare,
+    targetSquare,
+  }: PieceDropHandlerArgs): boolean {
+    if (!targetSquare) return false;
 
     try {
-      chessGame.move({
+      const move = chessGame.move({
         from: sourceSquare,
         to: targetSquare,
         promotion: "q",
       });
-      setChessPosition(chessGame.fen());
-      setMoveFrom("");
-      setOptionSquares({});
-      setTimeout(makeRandomMove, 500);
 
-      // return true as the move was successful
-      return true;
+      if (move) {
+        setChessPosition(chessGame.fen());
+        setMoveFrom("");
+        setOptionSquares({});
+
+        if (chessGame.isCheckmate()) {
+          alert("You win! Checkmate.");
+          return true;
+        }
+
+        setTimeout(makeRandomMove, 300);
+        return true;
+      }
+      return false;
     } catch {
-      // return false as the move was not successful
       return false;
     }
   }
 
-  // set the chessboard options
   const chessboardOptions: ChessboardOptions = {
     onPieceDrop,
     onSquareClick,
     position: chessPosition,
     squareStyles: optionSquares,
     id: "click-or-drag-to-move",
-    boardOrientation: "black",
+    boardOrientation: playerColor === "w" ? "white" : "black",
     boardStyle: { width: 500 },
   };
+
   return (
     <div className="flex justify-center my-10">
       <Chessboard options={chessboardOptions} />
@@ -155,4 +156,4 @@ function page() {
   );
 }
 
-export default page;
+export default Page;
