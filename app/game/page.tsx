@@ -16,23 +16,29 @@ function Page() {
   const [optionSquares, setOptionSquares] = useState({});
   const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
 
+  // First: choose player's color on mount
   useEffect(() => {
     const isWhite = Math.random() < 0.5;
-    const color = isWhite ? "w" : "b";
-    setPlayerColor(color);
-
-    setTimeout(() => {
-      const botColor = color === "w" ? "b" : "w";
-      if (chessGame.turn() === botColor) {
-        makeRandomMove();
-      }
-    }, 200);
+    setPlayerColor(isWhite ? "w" : "b");
   }, []);
+
+  // Second: once playerColor is set, if it's bot's turn, let the bot move
+  useEffect(() => {
+    const botColor = playerColor === "w" ? "b" : "w";
+    if (chessGame.turn() === botColor) {
+      setTimeout(makeRandomMove, 300);
+    }
+  }, [playerColor]);
 
   function makeRandomMove() {
     if (chessGame.isGameOver()) return;
 
     const botColor = playerColor === "w" ? "b" : "w";
+    if (chessGame.history().length < 0 && botColor == "b") {
+      return;
+    }
+    console.log(chessGame.turn());
+
     // if (chessGame.turn() !== botColor) return;
 
     const possibleMoves = chessGame.moves();
